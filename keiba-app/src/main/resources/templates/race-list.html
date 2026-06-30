@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>競馬分析システム - レース一覧</title>
+	<style>
+		body {
+			font-family: 'Helvetica Neue', Arial, sans-serif;
+			background-color: #f4f7f6;
+			margin: 40px;
+			color: #333;
+		}
+
+		h1 {
+			color: #2c3e50;
+			border-bottom: 2px solid #1abc9c;
+			padding-bottom: 10px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 20px;
+			background: #fff;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+		}
+
+		th,
+		td {
+			padding: 12px 15px;
+			text-align: left;
+			border-bottom: 1px solid #ddd;
+		}
+
+		th {
+			background-color: #1abc9c;
+			color: white;
+		}
+
+		tr:hover {
+			background-color: #f5f5f5;
+		}
+
+		.badge {
+			background: #34495e;
+			color: white;
+			padding: 3px 8px;
+			border-radius: 3px;
+			font-size: 0.9em;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>🐎 レース分析一覧（テストデータ表示）</h1>
+	<p>MySQLから取得した現在の登録レース情報です。</p>
+
+	<table>
+		<thead>
+			<tr>
+				<th>レースID</th>
+				<th>開催日</th>
+				<th>開催場</th>
+				<th>R</th>
+				<th>レース名</th>
+				<th>条件</th>
+				<th>距離</th>
+				<th>天候/馬場</th>
+			</tr>
+		</thead>
+		<tbody>
+			<!-- th:each で Javaから届いた List<Race> を1行ずつループ出力します -->
+			<tr th:each="race : ${races}">
+				<td th:text="${race.netkeibaRaceId}">202500000000</td>
+				<td th:text="${race.raceDate}">2025-01-01</td>
+				<td><span class="badge" th:text="${race.location}">東京</span></td>
+				<td th:text="${race.raceNumber + 'R'}">11R</td>
+				<td>
+					<a th:href="@{/races/{id}/results(id=${race.id})}" th:text="${race.raceName}"
+						style="color: #009688; font-weight: bold; text-decoration: none;">レース名</a>
+				</td>
+				<td th:text="${race.trackType}">芝</td>
+				<td th:text="${race.distance + 'm'}">1600m</td>
+				<td th:text="${race.weather + ' / ' + race.trackCondition}">晴 / 良</td>
+			</tr>
+		</tbody>
+	</table>
+
+</body>
+
+</html>

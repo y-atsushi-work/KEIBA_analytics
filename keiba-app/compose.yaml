@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: 'mysql:8.4.10'  # ← ポイント1：バージョンを固定
+    container_name: horse-race-db
+    environment:
+      MYSQL_DATABASE: 'mydatabase'
+      MYSQL_ROOT_PASSWORD: 'root'
+      TZ: 'Asia/Tokyo'     # タイムゾーンを日本時間に設定
+    ports:
+      - '3306:3306'
+    volumes:               # ← ポイント2：データの永続化
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

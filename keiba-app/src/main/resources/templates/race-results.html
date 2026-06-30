@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+
+<head>
+	<meta charset="UTF-8">
+	<title th:text="${race.raceName} + ' 結果一覧'">レース結果</title>
+	<style>
+		body {
+			font-family: 'Helvetica Neue', Arial, sans-serif;
+			background-color: #f8f9fa;
+			color: #333;
+			margin: 0;
+			padding: 20px;
+		}
+
+		.container {
+			max-width: 1000px;
+			margin: 0 auto;
+			background: #fff;
+			padding: 30px;
+			border-radius: 8px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+		}
+
+		h1 {
+			font-size: 24px;
+			color: #2c3e50;
+			margin-bottom: 5px;
+		}
+
+		.race-meta {
+			color: #7f8c8d;
+			font-size: 14px;
+			margin-bottom: 25px;
+			border-bottom: 2px solid #ecf0f1;
+			padding-bottom: 15px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 10px;
+		}
+
+		th,
+		td {
+			padding: 12px 15px;
+			text-align: center;
+			border-bottom: 1px solid #e2e8f0;
+		}
+
+		th {
+			background-color: #f1f5f9;
+			color: #475569;
+			font-weight: 600;
+		}
+
+		tr:hover {
+			background-color: #f8fafc;
+		}
+
+		.rank {
+			font-weight: bold;
+			padding: 4px 8px;
+			border-radius: 4px;
+			display: inline-block;
+			min-width: 20px;
+		}
+
+		.rank-1 {
+			background-color: #fef3c7;
+			color: #d97706;
+			border: 1px solid #fde68a;
+		}
+
+		/* 1着: 金 */
+		.rank-2 {
+			background-color: #f1f5f9;
+			color: #475569;
+			border: 1px solid #cbd5e1;
+		}
+
+		/* 2着: 銀 */
+		.rank-3 {
+			background-color: #ffedd5;
+			color: #ea580c;
+			border: 1px solid #fed7aa;
+		}
+
+		/* 3着: 銅 */
+	</style>
+</head>
+
+<body>
+
+	<div class="container">
+		<!-- レース基本情報 -->
+		<h1 th:text="${race.raceName}"></h1>
+		<div class="race-meta">
+			開催地: <span th:text="${race.location}"></span> |
+			コース: <span th:text="${race.trackType}"></span> <span th:text="${race.distance}"></span>m |
+			天候: <span th:text="${race.weather}"></span> |
+			馬場状態: <span th:text="${race.trackCondition}"></span>
+		</div>
+
+		<!-- レース結果テーブル -->
+		<table>
+			<thead>
+				<tr>
+					<th>着順</th>
+					<th>枠番</th>
+					<th>馬番</th>
+					<th>馬名</th>
+					<th>斤量</th>
+					<th>騎手</th>
+					<th>タイム</th>
+					<th>馬体重 (kg)</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr th:each="result : ${results}">
+					<td>
+						<!-- 1〜3着だけ色付きバッジ、4着以降は通常表示、99は中止 -->
+						<span class="rank"
+							th:classappend="${result.rowOrder == 1} ? 'rank-1' : (${result.rowOrder == 2} ? 'rank-2' : (${result.rowOrder == 3} ? 'rank-3' : ''))"
+							th:text="${result.rowOrder == 99} ? '中止' : ${result.rowOrder} + '着'">
+						</span>
+					</td>
+					<td th:text="${result.bracketNumber}"></td>
+					<td th:text="${result.horseNumber}"></td>
+					<td style="text-align: left; font-weight: bold;" th:text="${result.horse.horseName}"></td>
+					<td th:text="${result.weight != null ? #numbers.formatDecimal(result.weight, 1, 1) : '-'}"></td>
+					<td th:text="${result.jockeyName}"></td>
+					<td th:text="${result.raceTime}"></td>
+					<td>
+						<!-- 馬体重の表示制御（NULLなら計不、数値があれば増減符号を判定して結合） -->
+						<span th:if="${result.horseWeight == null}">計不</span>
+						<span th:if="${result.horseWeight != null}">
+							<span th:text="${result.horseWeight}"></span>
+							<span th:if="${result.weightChange > 0}" th:text="${'(+' + result.weightChange + ')'}"></span>
+							<span th:if="${result.weightChange < 0}" th:text="${'(' + result.weightChange + ')'}"></span>
+							<span th:if="${result.weightChange == 0}">(0)</span>
+						</span>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<p style="margin-top: 20px;"><a href="/races">← レース一覧に戻る</a></p>
+	</div>
+
+</body>
+
+</html>

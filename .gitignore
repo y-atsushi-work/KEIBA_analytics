@@ -1,0 +1,7 @@
+.metadata/
+.plugins/
+bin/
+build/
+.gradle/
+*.log
+.DS_Store

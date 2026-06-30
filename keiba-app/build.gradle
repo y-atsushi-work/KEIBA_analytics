@@ -1,0 +1,50 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// 最初から入っている基本セット
+	implementation 'org.springframework.boot:spring-boot-starter'
+	
+	// 画面表示やWEBアプリにするために追加
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	// getter/setterを自動生成してコードをスッキリさせる（Lombok）
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Docker Compose連携（これを足すと、起動時にMySQLコンテナを自動検知してくれます）
+	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+
+	// MySQL接続用（最初から入っていたもの）
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	
+	// データベース操作用（JPA）
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	
+	// テスト用の設定（最初から入っていたもの）
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	
+	implementation 'org.jsoup:jsoup:1.17.2'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
