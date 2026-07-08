@@ -13,7 +13,7 @@ public class RaceSyncManager implements CommandLineRunner {
 
     private final RaceRepository raceRepository;
     private final KeibaScraper keibaScraper;
-    private final RaceService raceService; // 既存の1レース保存用サービス
+    private final RaceService raceService;
 
     public RaceSyncManager(RaceRepository raceRepository, KeibaScraper keibaScraper, RaceService raceService) {
         this.raceRepository = raceRepository;
@@ -25,55 +25,52 @@ public class RaceSyncManager implements CommandLineRunner {
     public void run(String... args) throws Exception {
         System.out.println("[⚙️同期システム] アプリ起動時のデータ同期チェックを開始します...");
 
-        //==一時コメントアウト
-//        // 1. 既存のメソッドを利用して最新のRaceエンティティを取得し、その開催日（raceDate）を取り出す
-//        Optional<Race> latestRaceOpt = raceRepository.findFirstByOrderByRaceDateDesc();
-//        
-//        // データがあればその日付、なければ過去の基準日（例: 2024年12月1日）を設定
-//        LocalDate startDate = latestRaceOpt.map(Race::getRaceDate).orElse(LocalDate.of(2024, 12, 1));
-//        LocalDate endDate = LocalDate.now(); // 現在の日付まで
-
-        //デバック用に記述
+        // テスト用の期間設定（2020年1月1日 〜 2020年1月31日までの総当たり）
         LocalDate startDate = LocalDate.of(2020, 1, 1);
-        LocalDate endDate = LocalDate.of(2020, 1, 31);
-        System.out.println("[⚙️同期システム] 【デバッグモード】2020年1月の1ヶ月間限定で同期テストを開始します...");
+        LocalDate endDate = LocalDate.of(2020, 1, 6);
         
-        System.out.println("[⚙️同期システム] 前回最終取得日: " + startDate + " 〜 本日: " + endDate);
+        System.out.println("[⚙️同期システム] 【総当たりモード】" + startDate + " から " + endDate + " まで1日ずつ調査します。");
 
-        if (startDate.isAfter(endDate) || startDate.isEqual(endDate)) {
-            System.out.println("[⚙️同期システム] すでにデータベースは最新です。同期をスキップします。");
-            return;
-        }
-
-        // 2. 開始月から終了月までの開催日をループで調査
-        LocalDate currentMonth = startDate.withDayOfMonth(1);
-        while (!currentMonth.isAfter(endDate.withDayOfMonth(1))) {
-            System.out.println("[⚙️同期システム] カレンダー巡回中... " + currentMonth.getYear() + "年" + currentMonth.getMonthValue() + "月");
+        // 開始日から終了日まで、1日ずつ実直に進めるループ
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
             
-            List<LocalDate> raceDates = keibaScraper.fetchRaceDatesOfMonth(currentMonth.getYear(), currentMonth.getMonthValue());
+            System.out.println("\n--------------------------------------------------");
+            System.out.println("[⚙️同期システム] 調査中: " + currentDate);
             
-            for (LocalDate raceDate : raceDates) {
-                // 前回取得日以前の古い開催日はスキップ
-                if (raceDate.isBefore(startDate)) {
-                    continue;
-                }
-                
-                System.out.println("[⚙️同期システム] 開催日を発見: " + raceDate + "。全レースのインポートを開始します。");
-                List<String> raceIds = keibaScraper.fetchRaceIdsOfDate(raceDate);
+            // 1. その日のレースID一覧を取得してみる
+            List<String> raceIds = keibaScraper.fetchRaceIdsOfDate(currentDate);
+            
+            // 2. 空のページ（レースIDが0件）かどうかの判定
+            if (raceIds == null || raceIds.isEmpty()) {
+                // 何もないページなら「開催なし」と判定して楽にスキップ！
+                System.out.println("[⚙️スキップ] " + currentDate + " はレース開催がありませんでした。");
+            } else {
+                // レースIDが存在する場合（開催日）はインポートを実行
+                System.out.println("[⚙️開催日発見] " + currentDate + " に " + raceIds.size() + " 件のレースを検出しました。");
                 
                 for (String raceId : raceIds) {
                     try {
-                        // 既存の1レース取得・保存ロジックを再利用してDBへ蓄積
+                        System.out.println("[💾同期中] レースID: " + raceId);
                         raceService.syncRaceResult(raceId);
+                        
+                        // レース詳細の取得間隔（念のためここも1〜2秒あけるとより安全です）
+                        Thread.sleep(1500);
                     } catch (Exception e) {
                         System.err.println("[❌エラー] レースID: " + raceId + " の同期に失敗しました。");
+                        e.printStackTrace();
                     }
                 }
             }
-            // 翌月へ進める
-            currentMonth = currentMonth.plusMonths(1);
+
+            // 💡 ご提案の通り、日付を変えるタイミングで安全のために「5秒間隔」のウェイトを入れる
+            System.out.println("[⚙️同期システム] サーバー負荷軽減のため、5秒間待機して次の日に進みます...");
+            Thread.sleep(5000);
+
+            // 次の日へ進める
+            currentDate = currentDate.plusDays(1);
         }
 
-        System.out.println("[⚙️同期システム] すべてのバックログデータのインポートが完了しました！");
+        System.out.println("\n[⚙️同期システム] 指定期間の総当たりチェックがすべて完了しました！");
     }
 }
