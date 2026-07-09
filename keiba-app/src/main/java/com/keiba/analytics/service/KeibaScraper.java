@@ -63,11 +63,15 @@ public class KeibaScraper {
 		String url = String.format("https://db.netkeiba.com/race/calendar/%04d%02d/", year, month);
 
 		try {
-			Thread.sleep(1000); // 相手サーバーに負荷をかけないよう、処理を1秒間（1000ミリ秒）一時停止する
+			Thread.sleep(1000); // 相手サーバーに負荷をかけないよう、処理を1秒間一時停止する
+
+			// Java 21対応：URI経由でURLに変換し、User-Agent（ブラウザのふり）を設定してストリームを開く
+			java.net.URLConnection connection = java.net.URI.create(url).toURL().openConnection();
+			connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
 
 			// 指定したURLのHTMLを、文字化けを防ぐために「EUC-JP」という文字コードを指定して読み込む
 			Document doc = Jsoup.parse(
-					new java.net.URL(url).openStream(),
+					connection.getInputStream(),
 					"EUC-JP",
 					"https://db.netkeiba.com");
 

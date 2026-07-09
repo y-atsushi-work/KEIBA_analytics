@@ -7,7 +7,8 @@ services:
       MYSQL_ROOT_PASSWORD: 'root'
       TZ: 'Asia/Tokyo'     # タイムゾーンを日本時間に設定
     ports:
-      - '3306:3306'
+      - '3307:3306'
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:               # ← ポイント2：データの永続化
       - mysql_data:/var/lib/mysql
 
