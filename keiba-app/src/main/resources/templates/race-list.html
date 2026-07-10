@@ -53,7 +53,45 @@
 </head>
 
 <body>
+	<div style="margin: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+	    <h4>🏇 競馬データ手動同期</h4>
+	    <button id="runBatchBtn" class="btn btn-primary">今すぐ出馬表を取得（1週間分）</button>
+	    <p id="batchMessage" style="color: blue; margin-top: 10px; font-weight: bold;"></p>
+	</div>
 
+	<script>
+	document.getElementById('runBatchBtn').addEventListener('click', function() {
+	    const msgEl = document.getElementById('batchMessage');
+	    
+	    // ボタンの見た目を変えて、2回連打できないようにロックする
+	    msgEl.style.color = "blue";
+	    msgEl.innerText = "⏳ バッチ処理を実行中...（IntelliJやEclipseのコンソールログを確認してください）";
+	    this.disabled = true; 
+
+	    // Java側で作った「@PostMapping("/run-shutuba")」のURLを叩く
+	    fetch('/api/batch/run-shutuba', { 
+	        method: 'POST' 
+	    })
+	    .then(response => {
+	        if (response.ok) {
+	            return response.text();
+	        }
+	        throw new Error('ネットワークエラーまたはサーバーエラーが発生しました。');
+	    })
+	    .then(data => {
+	        // 成功したらJavaから返ってきた文字を表示
+	        msgEl.style.color = "green";
+	        msgEl.innerText = "✅ " + data;
+	        this.disabled = false; // ボタンのロックを解除
+	    })
+	    .catch(error => {
+	        // エラーが起きた場合
+	        msgEl.style.color = "red";
+	        msgEl.innerText = "❌ エラー: " + error.message;
+	        this.disabled = false; // ボタンのロックを解除
+	    });
+	});
+	</script>
 	<h1>🐎 レース分析一覧（テストデータ表示）</h1>
 	<p>MySQLから取得した現在の登録レース情報です。</p>
 
