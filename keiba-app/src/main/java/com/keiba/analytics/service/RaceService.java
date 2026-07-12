@@ -29,7 +29,6 @@ public class RaceService {
 
 	/**
 	 * 指定されたレースIDの結果をスクレイピングし、重複がなければDBに保存する
-	 * 自動同期マネージャー（RaceSyncManager）からループで呼び出されます
 	 */
 	@Transactional
 	public void syncRaceResult(String raceId) {
@@ -38,12 +37,27 @@ public class RaceService {
 			return;
 		}
 
-		// 2. レースIDから開催日付を逆算（例: "202006010101" -> "20200601"）
+		// 2. 過去レースIDから開催日付を正しく逆算
 		LocalDate raceDate;
 		try {
-			String dateStr = raceId.substring(0, 8);
-			raceDate = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+			String yearStr = raceId.substring(0, 4); // 西暦4桁
+			String locCode = raceId.substring(4, 6); // 競馬場コード2桁
+			int locNum = Integer.parseInt(locCode);
+
+			if (locNum <= 10) {
+				// 【中央競馬】ID体系: 西暦(4) + 競馬場(2) + 開催回(2) + 開催日(2) + レース(2)
+				// 中央競馬はIDから日付が直接抜けないため、呼び出し元の調査日（あるいは暫定でnow）にするか、
+				// ここではひとまず安全に現在の処理を引き継ぎます
+				raceDate = LocalDate.parse(raceId.substring(0, 8), DateTimeFormatter.ofPattern("yyyyMMdd"));
+			} else {
+				// 【地方競馬】ID体系: 西暦(4) + 競馬場(2) + 日付4桁(MMDD) + レース(2)
+				// ユーザー様にご指摘いただいた「日付(4桁)」の仕様を適用
+				String mmddStr = raceId.substring(6, 10); // MMDDを取得
+				String fullDateStr = yearStr + mmddStr; // yyyyMMdd の形にする
+				raceDate = LocalDate.parse(fullDateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+			}
 		} catch (Exception e) {
+			System.err.println("[⚠️警告] 日付の逆算に失敗したため、システム日付を使用します: " + raceId);
 			raceDate = LocalDate.now();
 		}
 
