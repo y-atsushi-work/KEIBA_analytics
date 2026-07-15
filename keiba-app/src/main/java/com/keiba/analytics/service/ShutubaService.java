@@ -112,18 +112,22 @@ public class ShutubaService {
 					// 7. 馬体重(増減) (class="Weight") -> spanの中身まで含めるなら .text()
 					entry.setHorseWeight(row.selectFirst("td.Weight").text());
 					// 8. 予想オッズ
-					String oddsText = row.selectFirst("td.Popular span[id*=odds-]").text();
-					if (!oddsText.contains("-")) {
-						entry.setOdds(Double.parseDouble(oddsText));
-					} else {
-						entry.setOdds(null); // 値がないことを明示
+					Element oddsElem = row.selectFirst("td.Popular span");
+					if (oddsElem != null) {
+					    String oddsText = oddsElem.text().trim();
+					    // オッズが "---.-" の場合は null にする
+					    if (oddsText.contains("-") || oddsText.isEmpty()) {
+					        entry.setOdds(null);
+					    } else {
+					        entry.setOdds(Double.parseDouble(oddsText));
+					    }
 					}
 					// 9. 人気
-					String ninkiText = row.selectFirst("td.Popular_Ninki span[id*=ninki-]").text();
-					if (!ninkiText.contains("*")) {
-						entry.setPopularity(Integer.parseInt(ninkiText));
+					Element ninkiElem = row.selectFirst("td.Popular_Ninki span[id^=ninki-]");
+					if (ninkiElem != null && !ninkiElem.text().contains("*")) {
+						entry.setPopularity(Integer.parseInt(ninkiElem.text()));
 					} else {
-						entry.setPopularity(null); // 値がないことを明示
+						entry.setPopularity(null);
 					}
 					// HorseId の抽出
 					Element horseLink = row.selectFirst("td.HorseInfo a");
