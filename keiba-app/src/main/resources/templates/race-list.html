@@ -2,130 +2,106 @@
 <html xmlns:th="http://www.thymeleaf.org">
 
 <head>
-	<meta charset="UTF-8">
-	<title>競馬分析システム - レース一覧</title>
-	<style>
-		body {
-			font-family: 'Helvetica Neue', Arial, sans-serif;
-			background-color: #f4f7f6;
-			margin: 40px;
-			color: #333;
-		}
-
-		h1 {
-			color: #2c3e50;
-			border-bottom: 2px solid #1abc9c;
-			padding-bottom: 10px;
-		}
-
-		table {
-			width: 100%;
-			border-collapse: collapse;
-			margin-top: 20px;
-			background: #fff;
-			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-		}
-
-		th,
-		td {
-			padding: 12px 15px;
-			text-align: left;
-			border-bottom: 1px solid #ddd;
-		}
-
-		th {
-			background-color: #1abc9c;
-			color: white;
-		}
-
-		tr:hover {
-			background-color: #f5f5f5;
-		}
-
-		.badge {
-			background: #34495e;
-			color: white;
-			padding: 3px 8px;
-			border-radius: 3px;
-			font-size: 0.9em;
-		}
-	</style>
+    <meta charset="UTF-8">
+    <title>競馬分析システム - レース一覧</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7f6; margin: 40px; color: #333; }
+        .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .search-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .search-box input, .search-box select { padding: 8px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; cursor: pointer; }
+        th { background-color: #1abc9c; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .badge { background: #34495e; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.9em; }
+        .sync-box { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background: #fff; }
+    </style>
 </head>
 
 <body>
-	<div style="margin: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
-	    <h4>🏇 競馬データ手動同期</h4>
-	    <button id="runBatchBtn" class="btn btn-primary">今すぐ出馬表を取得（1週間分）</button>
-	    <p id="batchMessage" style="color: blue; margin-top: 10px; font-weight: bold;"></p>
-	</div>
 
-	<script>
-	document.getElementById('runBatchBtn').addEventListener('click', function() {
-	    const msgEl = document.getElementById('batchMessage');
-	    
-	    // ボタンの見た目を変えて、2回連打できないようにロックする
-	    msgEl.style.color = "blue";
-	    msgEl.innerText = "⏳ バッチ処理を実行中...（IntelliJやEclipseのコンソールログを確認してください）";
-	    this.disabled = true; 
+    <div class="header-section">
+        <h1>🐎 レース分析一覧</h1>
+        <nav>
+            <a href="/races">過去レース</a> | <a href="/shutuba">出馬予定</a>
+        </nav>
+    </div>
 
-	    // Java側で作った「@PostMapping("/run-shutuba")」のURLを叩く
-	    fetch('/api/batch/run-shutuba', { 
-	        method: 'POST' 
-	    })
-	    .then(response => {
-	        if (response.ok) {
-	            return response.text();
-	        }
-	        throw new Error('ネットワークエラーまたはサーバーエラーが発生しました。');
-	    })
-	    .then(data => {
-	        // 成功したらJavaから返ってきた文字を表示
-	        msgEl.style.color = "green";
-	        msgEl.innerText = "✅ " + data;
-	        this.disabled = false; // ボタンのロックを解除
-	    })
-	    .catch(error => {
-	        // エラーが起きた場合
-	        msgEl.style.color = "red";
-	        msgEl.innerText = "❌ エラー: " + error.message;
-	        this.disabled = false; // ボタンのロックを解除
-	    });
-	});
-	</script>
-	<h1>🐎 レース分析一覧（テストデータ表示）</h1>
-	<p>MySQLから取得した現在の登録レース情報です。</p>
+    <div class="sync-box">
+        <h4>🏇 競馬データ手動同期</h4>
+        <button id="runBatchBtn">今すぐ出馬表を取得（1週間分）</button>
+        <span id="batchMessage" style="margin-left: 10px; font-weight: bold;"></span>
+    </div>
 
-	<table>
-		<thead>
-			<tr>
-				<th>レースID</th>
-				<th>開催日</th>
-				<th>開催場</th>
-				<th>R</th>
-				<th>レース名</th>
-				<th>条件</th>
-				<th>距離</th>
-				<th>天候/馬場</th>
-			</tr>
-		</thead>
-		<tbody>
-			<!-- th:each で Javaから届いた List<Race> を1行ずつループ出力します -->
-			<tr th:each="race : ${races}">
-				<td th:text="${race.netkeibaRaceId}">202500000000</td>
-				<td th:text="${race.raceDate}">2025-01-01</td>
-				<td><span class="badge" th:text="${race.location}">東京</span></td>
-				<td th:text="${race.raceNumber + 'R'}">11R</td>
-				<td>
-					<a th:href="@{/races/{id}/results(id=${race.id})}" th:text="${race.raceName}"
-						style="color: #009688; font-weight: bold; text-decoration: none;">レース名</a>
-				</td>
-				<td th:text="${race.trackType}">芝</td>
-				<td th:text="${race.distance + 'm'}">1600m</td>
-				<td th:text="${race.weather + ' / ' + race.trackCondition}">晴 / 良</td>
-			</tr>
-		</tbody>
-	</table>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="レース名で検索..." onkeyup="filterTable()">
+        <select id="locationSelect" onchange="filterTable()">
+            <option value="">全開催場</option>
+            <option value="東京">東京</option>
+            <option value="中山">中山</option>
+            <option value="京都">京都</option>
+            <option value="阪神">阪神</option>
+        </select>
+    </div>
 
+    <table id="raceTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">開催日 ↕</th>
+                <th onclick="sortTable(1)">開催場 ↕</th>
+                <th onclick="sortTable(2)">R ↕</th>
+                <th onclick="sortTable(3)">レース名 ↕</th>
+                <th>条件</th>
+                <th>距離</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="race : ${races}">
+                <td th:text="${race.raceDate}">2025-01-01</td>
+                <td><span class="badge" th:text="${race.location}">東京</span></td>
+                <td th:text="${race.raceNumber + 'R'}">11R</td>
+                <td>
+                    <a th:href="@{/races/{id}/results(id=${race.id})}" th:text="${race.raceName}" style="color: #009688; font-weight: bold;">レース名</a>
+                </td>
+                <td th:text="${race.trackType}">芝</td>
+                <td th:text="${race.distance + 'm'}">1600m</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        // テーブル検索機能
+        function filterTable() {
+            let input = document.getElementById("searchInput").value.toUpperCase();
+            let loc = document.getElementById("locationSelect").value;
+            let table = document.getElementById("raceTable");
+            let tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let name = tr[i].getElementsByTagName("td")[3].innerText.toUpperCase();
+                let location = tr[i].getElementsByTagName("td")[1].innerText;
+                if (name.indexOf(input) > -1 && (loc === "" || location.indexOf(loc) > -1)) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+
+        // テーブルソート機能
+        function sortTable(n) {
+            let table = document.getElementById("raceTable");
+            let rows = Array.from(table.rows).slice(1);
+            let dir = table.getAttribute("data-dir") === "asc" ? "desc" : "asc";
+            table.setAttribute("data-dir", dir);
+
+            rows.sort((a, b) => {
+                let valA = a.cells[n].innerText.toLowerCase();
+                let valB = b.cells[n].innerText.toLowerCase();
+                return dir === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            });
+            rows.forEach(row => table.tBodies[0].appendChild(row));
+        }
+    </script>
 </body>
-
 </html>

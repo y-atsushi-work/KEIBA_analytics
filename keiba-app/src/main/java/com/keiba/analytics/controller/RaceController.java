@@ -2,6 +2,10 @@ package com.keiba.analytics.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,14 +29,15 @@ public class RaceController {
      * ブラウザで「http://localhost:8080/races」にアクセスしたときに動くメソッド
      */
     @GetMapping("/races")
-    public String showRaceList(Model model) {
-        // 1. Serviceから全レース情報を取得
-        List<Race> races = raceService.getAllRaces();
+    public String showRaceList(
+            @PageableDefault(size = 20, sort = "raceDate", direction = Sort.Direction.DESC) Pageable pageable, 
+            Model model) {
         
-        // 2. HTML（Thymeleaf）に「races」という名前でデータを渡す
-        model.addAttribute("races", races);
+        // Page<Race> で受け取ることで、Thymeleaf側で総ページ数や現在ページが扱えるようになります
+        Page<Race> racePage = raceService.getRaces(pageable);
         
-        // 3. 表示するHTMLファイルの名前を指定（src/main/resources/templates/race-list.html）
+        model.addAttribute("racePage", racePage);
+        model.addAttribute("races", racePage.getContent());
         return "race-list";
     }
 

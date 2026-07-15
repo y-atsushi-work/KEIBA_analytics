@@ -5,6 +5,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,15 +47,10 @@ public class RaceService {
 			int locNum = Integer.parseInt(locCode);
 
 			if (locNum <= 10) {
-				// 【中央競馬】ID体系: 西暦(4) + 競馬場(2) + 開催回(2) + 開催日(2) + レース(2)
-				// 中央競馬はIDから日付が直接抜けないため、呼び出し元の調査日（あるいは暫定でnow）にするか、
-				// ここではひとまず安全に現在の処理を引き継ぎます
 				raceDate = LocalDate.parse(raceId.substring(0, 8), DateTimeFormatter.ofPattern("yyyyMMdd"));
 			} else {
-				// 【地方競馬】ID体系: 西暦(4) + 競馬場(2) + 日付4桁(MMDD) + レース(2)
-				// ユーザー様にご指摘いただいた「日付(4桁)」の仕様を適用
-				String mmddStr = raceId.substring(6, 10); // MMDDを取得
-				String fullDateStr = yearStr + mmddStr; // yyyyMMdd の形にする
+				String mmddStr = raceId.substring(6, 10); 
+				String fullDateStr = yearStr + mmddStr;
 				raceDate = LocalDate.parse(fullDateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
 			}
 		} catch (Exception e) {
@@ -82,6 +79,13 @@ public class RaceService {
 		// 5. レースと結果を一括保存
 		raceRepository.save(race);
 		System.out.println("[💾DB保存完了] レース: " + race.getRaceName() + " (" + raceId + ") のデータを蓄積しました。");
+	}
+
+	/**
+	 * ページネーション対応：レース一覧をページ単位で取得する
+	 */
+	public Page<Race> getRaces(Pageable pageable) {
+		return raceRepository.findAll(pageable);
 	}
 
 	public List<Race> getAllRaces() {

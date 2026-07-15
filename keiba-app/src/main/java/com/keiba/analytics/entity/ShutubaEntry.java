@@ -22,15 +22,18 @@ public class ShutubaEntry {
     @JoinColumn(name = "shutuba_race_id", nullable = false)
     private ShutubaRace shutubaRace;
 
-    // 出走馬のID（既存の horses テーブルと紐付けられるようにIDのみ保持）
+    // 出走馬のID
     @Column(name = "netkeiba_horse_id")
     private String netkeibaHorseId;
-
     private String horseName;
     private Integer bracketNumber; // 枠番
     private Integer horseNumber;   // 馬番
     private String jockey;         // 騎手（予定）
-    private String weight;         // 斤量
+    private String carriedWeight;  // 斤量
+    private String sexAge;         // 性齢
+    private String horseWeight;    // 馬体重(増減)
+    private Double odds;           // 予想オッズ
+    private Integer popularity;    // 人気
 
     // --- Getters and Setters ---
     public Long getId() { return id; }
@@ -46,7 +49,15 @@ public class ShutubaEntry {
     public Integer getHorseNumber() { return horseNumber; }
     public void setHorseNumber(Integer horseNumber) { this.horseNumber = horseNumber; }
     public String getJockey() { return jockey; }
-    public void setJockey(String jockey) { this. jockey = jockey; }
-    public String getWeight() { return weight; }
-    public void setWeight(String weight) { this.weight = weight; }
+    public void setJockey(String jockey) { this.jockey = jockey; }
+    public String getCarriedWeight() { return carriedWeight; }
+    public void setCarriedWeight(String weight) { this.carriedWeight = weight; }
+    public String getSexAge() { return sexAge; }
+    public void setSexAge(String sexAge) { this.sexAge = sexAge; }
+    public String getHorseWeight() { return horseWeight; }
+    public void setHorseWeight(String horseWeight) { this.horseWeight = horseWeight; }
+    public Double getOdds() { return odds; }
+    public void setOdds(Double odds) { this.odds = odds; }
+    public Integer getPopularity() { return popularity; }
+    public void setPopularity(Integer popularity) { this.popularity = popularity; }
 }

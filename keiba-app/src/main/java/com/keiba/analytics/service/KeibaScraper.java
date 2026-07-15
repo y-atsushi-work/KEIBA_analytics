@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import com.keiba.analytics.entity.Horse;
 import com.keiba.analytics.entity.Race;
 import com.keiba.analytics.entity.RaceResult;
+import com.keiba.analytics.util.KeibaUtils;
 
 @Component
 public class KeibaScraper {
@@ -188,37 +189,9 @@ public class KeibaScraper {
 
 			// レースIDの4〜5文字目の2桁（競馬場コード）を切り出す
 			String locCode = raceId.substring(4, 6);
-			// 競馬場コードを、実際の競馬場名に変換（Javaの新しいswitch構文）
-			String location = switch (locCode) {
-			// === 中央競馬 (JRA) ===
-			case "01" -> "札幌";
-			case "02" -> "函館";
-			case "03" -> "福島";
-			case "04" -> "新潟";
-			case "05" -> "東京";
-			case "06" -> "中山";
-			case "07" -> "中京";
-			case "08" -> "京都";
-			case "09" -> "阪神";
-			case "10" -> "小倉";
-			// === 地方競馬 (NAR) ===
-			case "30" -> "門別";
-			case "35" -> "盛岡";
-			case "36" -> "水沢";
-			case "42" -> "船橋";
-			case "43" -> "大井";
-			case "44" -> "川崎";
-			case "45" -> "浦和";
-			case "46" -> "金沢";
-			case "51" -> "笠松";
-			case "54" -> "名古屋";
-			case "65" -> "園田";
-			case "66" -> "姫路";
-			case "73" -> "高知";
-			case "86" -> "佐賀";
-			// 海外競馬やイレギュラー
-			default -> "その他";
-			};
+
+			String location = KeibaUtils.convertLocationCode(locCode);
+
 			race.setLocation(location); // 競馬場名をセット
 			// === 2. 各競走馬・着順データの詳細抽出 ===
 			List<RaceResult> results = new ArrayList<>(); // 馬ごとの着順結果を格納するリストを用意
@@ -328,10 +301,27 @@ public class KeibaScraper {
 					}
 				} catch (Exception e) {
 				}
-
+				// --- 馬番のセット ---
 				try {
-					result.setHorseNumber(Integer.parseInt(umabanStr)); // 馬番を数値に変換してセット
+					result.setHorseNumber(Integer.parseInt(umabanStr));
 				} catch (Exception e) {
+					// 馬番が取れなかった場合の処理
+				}
+
+				// --- 上がり3Fのセット
+				try {
+					// スクリーンショットより、上がり3Fは class="bml txt_c" を持つ td の中の span です
+					String last3fStr = tds.get(15).text().trim();
+
+					if (last3fStr != null) {
+						result.setLast3fTime(Double.parseDouble(last3fStr));
+					} else {
+						result.setLast3fTime(null);
+					}
+
+				} catch (Exception e) {
+					System.err.println("[⚠️警告] 上がり3Fの取得に失敗しました: " + e.getMessage());
+					result.setLast3fTime(null);
 				}
 
 				results.add(result); // 完成した1頭分の結果をリストに追加
