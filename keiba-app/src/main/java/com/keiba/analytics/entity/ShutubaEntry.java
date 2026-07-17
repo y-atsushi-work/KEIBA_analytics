@@ -32,8 +32,6 @@ public class ShutubaEntry {
     private String carriedWeight;  // 斤量
     private String sexAge;         // 性齢
     private String horseWeight;    // 馬体重(増減)
-    private Double odds;           // 予想オッズ
-    private Integer popularity;    // 人気
 
     // --- Getters and Setters ---
     public Long getId() { return id; }
@@ -56,8 +54,4 @@ public class ShutubaEntry {
     public void setSexAge(String sexAge) { this.sexAge = sexAge; }
     public String getHorseWeight() { return horseWeight; }
     public void setHorseWeight(String horseWeight) { this.horseWeight = horseWeight; }
-    public Double getOdds() { return odds; }
-    public void setOdds(Double odds) { this.odds = odds; }
-    public Integer getPopularity() { return popularity; }
-    public void setPopularity(Integer popularity) { this.popularity = popularity; }
 }

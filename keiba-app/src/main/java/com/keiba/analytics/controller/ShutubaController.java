@@ -7,7 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.keiba.analytics.entity.ShutubaRace;
-import com.keiba.analytics.service.ShutubaService; // サービスが用意されている想定
+import com.keiba.analytics.service.ShutubaService;
 
 @Controller
 public class ShutubaController {
@@ -17,13 +17,16 @@ public class ShutubaController {
 	public ShutubaController(ShutubaService shutubaService) {
 		this.shutubaService = shutubaService;
 	}
-
+	
 	@GetMapping("/shutuba")
 	public String showShutubaList(Model model) {
-		List<ShutubaRace> list = shutubaService.getUpcomingRaces();
-		System.out.println("取得したレース数: " + list.size()); // ログ出力
-		model.addAttribute("shutubaList", list);
-		return "shutuba-list";
+		// 今後の開催予定レースを取得
+	    List<ShutubaRace> list = shutubaService.getUpcomingRaces();
+	    
+	    // オッズ取得処理（fetchAndSaveOdds）はサービスから削除したため、
+	    // コントローラー側の呼び出しも削除しました。
+	    
+	    model.addAttribute("shutubaList", list);
+	    return "shutuba-list";
 	}
-	
 }

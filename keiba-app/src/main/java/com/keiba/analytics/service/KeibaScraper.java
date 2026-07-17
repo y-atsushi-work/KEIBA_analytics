@@ -277,6 +277,7 @@ public class KeibaScraper {
 				RaceResult result = new RaceResult(); // RaceResult（着順結果）オブジェクトを新しく作成
 				result.setRace(race); // この結果がどのレースのものかを紐付け
 				result.setHorse(horse); // どの馬のものかを紐付け
+				result.setSexAge(seireiStr);
 				result.setJockeyName(jockeyName);
 				result.setRaceTime(raceTime.isEmpty() ? "-" : raceTime); // タイムが空ならハイフンにする
 				result.setWeight(weight);
