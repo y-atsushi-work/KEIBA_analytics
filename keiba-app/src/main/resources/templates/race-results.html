@@ -111,9 +111,11 @@
 					<th>枠番</th>
 					<th>馬番</th>
 					<th>馬名</th>
+					<th>性齢</th>
 					<th>斤量</th>
 					<th>騎手</th>
 					<th>タイム</th>
+					<th>上り</th>
 					<th>馬体重 (kg)</th>
 				</tr>
 			</thead>
@@ -129,8 +131,10 @@
 					<td th:text="${result.bracketNumber}"></td>
 					<td th:text="${result.horseNumber}"></td>
 					<td style="text-align: left; font-weight: bold;" th:text="${result.horse.horseName}"></td>
+					<td th:text="${result.sexAge}"></td>
 					<td th:text="${result.weight != null ? #numbers.formatDecimal(result.weight, 1, 1) : '-'}"></td>
 					<td th:text="${result.jockeyName}"></td>
+					<td th:text="${result.last3fTime}"></td>
 					<td th:text="${result.raceTime}"></td>
 					<td>
 						<!-- 馬体重の表示制御（NULLなら計不、数値があれば増減符号を判定して結合） -->
@@ -142,6 +146,10 @@
 							<span th:if="${result.weightChange == 0}">(0)</span>
 						</span>
 					</td>
+					<!-- 分析結果を馬番でマッチングして表示するイメージ -->
+					    <td th:with="analysis=${analysisList.stream().filter(a -> a.horseNumber == result.horseNumber).findFirst().orElse(null)}">
+					        <span th:if="${analysis != null}" th:text="${analysis.speedIndex}"></span>
+					    </td>
 				</tr>
 			</tbody>
 		</table>

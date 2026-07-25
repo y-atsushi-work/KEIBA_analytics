@@ -26,8 +26,10 @@ public class RaceSyncManager implements CommandLineRunner {
 		System.out.println("[⚙️同期システム] アプリ起動時のデータ同期チェックを開始します...");
 
 		// テスト用の期間設定（2020年1月1日 〜 2020年1月31日までの総当たり）
-		LocalDate startDate = LocalDate.of(2020, 1, 1);
-		LocalDate endDate = LocalDate.of(2020, 1, 6);
+//		LocalDate startDate = LocalDate.of(2020, 1, 1);
+//		LocalDate endDate = LocalDate.of(2020, 1, 6);
+		LocalDate startDate = LocalDate.of(2020, 1, 3);  //起動時取得処理走らないようにするため
+		LocalDate endDate = LocalDate.of(2020, 1, 3);
 
 		System.out.println("[⚙️同期システム] 【総当たりモード】" + startDate + " から " + endDate + " まで1日ずつ調査します。");
 

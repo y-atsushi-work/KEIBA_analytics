@@ -15,13 +15,21 @@ import com.keiba.analytics.repository.ShutubaEntryRepository;
 import com.keiba.analytics.repository.ShutubaRaceRepository;
 import com.keiba.analytics.util.KeibaUtils;
 
+/**
+ * 出馬表情報の収集・管理を行うサービス層。
+ * 外部サイト（netkeiba）からのスクレイピングおよびDBへの保存・更新を担当します。
+ */
 @Service
 public class ShutubaService {
-	// 1. @Autowiredは不要。final をつけることでコンストラクタで必ず注入されるようになる
+
+	// リポジトリは変更不要のためfinalで定義し、コンストラクタ経由でDIする
 	private final ShutubaRaceRepository shutubaRaceRepository;
 	private final ShutubaEntryRepository shutubaEntryRepository;
 
-	// 2. コンストラクタでまとめて注入（これがベストプラクティス）
+	/**
+	 * コンストラクタベースの依存性注入。
+	 * Springがリポジトリのインスタンスを自動的に注入します。
+	 */
 	public ShutubaService(ShutubaRaceRepository shutubaRaceRepository,
 			ShutubaEntryRepository shutubaEntryRepository) {
 		this.shutubaRaceRepository = shutubaRaceRepository;
@@ -29,31 +37,29 @@ public class ShutubaService {
 	}
 
 	/**
-	 * 出馬表データをDBに保存（または上書き更新）する
+	 * スクレイピングしたレースデータをDBに反映します。
+	 * 既にレースIDが存在する場合はデータを更新し、存在しない場合は新規保存します。
 	 */
 	@Transactional
 	public void saveOrUpdateShutuba(ShutubaRace newRace) {
 		String raceId = newRace.getNetkeibaRaceId();
 
-		// 既存のレースを探す
-		shutubaRaceRepository.findByNetkeibaRaceId(raceId).ifPresentOrElse(existingRace -> { // 既存の各馬のデータを「最新のスクレイピング結果」で更新する
+		// データベースに既存のレース情報が存在するか確認
+		shutubaRaceRepository.findByNetkeibaRaceId(raceId).ifPresentOrElse(existingRace -> {
+			// 【更新処理】既存レースの各出走馬データをマッチングして更新
 			for (ShutubaEntry newEntry : newRace.getEntries()) {
 				existingRace.getEntries().stream()
-						.filter(e -> e.getHorseNumber().equals(newEntry.getHorseNumber()))
+						.filter(e -> e.getHorseNumber().equals(newEntry.getHorseNumber())) // 馬番で一致判定
 						.findFirst()
 						.ifPresent(oldEntry -> {
-							// ここで「値がある場合のみ更新」するようにする
-							if (newEntry.getOdds() != null)
-								oldEntry.setOdds(newEntry.getOdds());
-							if (newEntry.getPopularity() != null)
-								oldEntry.setPopularity(newEntry.getPopularity());
+							// 現時点で更新が必要な項目（馬体重）を反映
 							if (newEntry.getHorseWeight() != null)
 								oldEntry.setHorseWeight(newEntry.getHorseWeight());
 						});
 			}
 			System.out.println("[🔄更新] 出馬表: " + existingRace.getRaceName() + " (" + raceId + ") のデータを更新しました。");
 		}, () -> {
-			// 【新規の場合】そのまま保存
+			// 【新規保存処理】DBに該当レースがない場合はそのまま永続化
 			shutubaRaceRepository.save(newRace);
 			System.out.println("[🆕保存] 出馬表: " + newRace.getRaceName() + " (" + raceId + ") を新規保存しました。");
 		});
@@ -61,88 +67,75 @@ public class ShutubaService {
 
 	/**
 	 * 【クリーンアップ処理】
-	 * 既に終了した過去の出馬表データ（テンポラリ）を削除する。
+	 * 保持期間が過ぎた過去のレースデータをDBから削除し、テーブルの肥大化を防ぎます。
 	 */
 	@Transactional
 	public void cleanupOldShutubaData() {
 		LocalDate today = LocalDate.now();
+		// 指定日付より前のデータを削除
 		shutubaRaceRepository.deleteByRaceDateBefore(today);
-		System.out.println("[🧹掃除完了] 昨日以前の出馬表一時データを削除しました。");
+		System.out.println("[🧹掃除完了] 今日より以前の出馬表一時データを削除しました。");
 	}
 
 	/**
-	 * 出走予定ページをスクレイピングして解析する
+	 * 指定されたレースIDの出走予定ページをスクレイピングし、
+	 * レース情報および出走馬情報を解析してDBに保存します。
 	 */
 	public void scrapeAndSaveShutuba(String raceId, LocalDate raceDate) {
+		// レースIDから開催場所コードとラウンド数を抽出（netkeibaの仕様に基づく）
 		String locationCode = raceId.substring(4, 6);
 		String roundStr = raceId.substring(6, 8);
 
 		String url = "https://race.netkeiba.com/race/shutuba.html?race_id=" + raceId;
+
 		try {
+			// 指定URLへ接続し、HTMLドキュメントを取得
+			// サーバー側からのブロックを防ぐため、適切なUser-Agentを設定
 			Document doc = Jsoup.connect(url)
 					.userAgent(
 							"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 					.timeout(10000)
 					.get();
 
+			// レースの基本情報を設定
 			ShutubaRace race = new ShutubaRace();
 			race.setNetkeibaRaceId(raceId);
 			race.setRaceDate(raceDate);
-			race.setRaceName(doc.select("h1").text());
+			race.setRaceName(doc.select("h1").text()); // ページタイトルからレース名を取得
 			race.setLocation(KeibaUtils.convertLocationCode(locationCode));
 			race.setRound(Integer.parseInt(roundStr));
 
+			// 出走馬リスト（tr.HorseList クラス）をループで処理
 			for (Element row : doc.select("tr.HorseList")) {
-
 				try {
 					ShutubaEntry entry = new ShutubaEntry();
-					// 1. 枠番 (class="Waku1 Txt_C") -> spanの中身を取得
-					entry.setBracketNumber(Integer.parseInt(row.selectFirst("td[class*=Waku] span").text()));
-					// 2. 馬番 (class="Umaban1 Txt_C")
-					entry.setHorseNumber(Integer.parseInt(row.selectFirst("td[class*=Umaban]").text()));
-					// 3. 馬名 (class="HorseName") -> spanの中のaタグのtitle属性またはテキスト
-					entry.setHorseName(row.selectFirst("span.HorseName a").text());
-					// 4. 性齢 (class="Barei Txt_C")
-					entry.setSexAge(row.selectFirst("td.Barei").text());
-					// 5. 斤量 (class="Txt_C" だが他と被るため、クラスの特定が難しい場合)
-					// ここは前後の位置関係から「Bareiの次のTD」を指定するのが最も確実です
+
+					// 各列の値をDOMのクラス指定から抽出
+					entry.setBracketNumber(Integer.parseInt(row.selectFirst("td[class*=Waku] span").text())); // 枠番
+					entry.setHorseNumber(Integer.parseInt(row.selectFirst("td[class*=Umaban]").text())); // 馬番
+					entry.setHorseName(row.selectFirst("span.HorseName a").text()); // 馬名
+					entry.setSexAge(row.selectFirst("td.Barei").text()); // 性齢
+					// 馬体重の近くにある「斤量」情報を取得
 					entry.setCarriedWeight(row.selectFirst("td.Barei").nextElementSibling().text());
-					// 6. 騎手 (class="Jockey")
-					entry.setJockey(row.selectFirst("td.Jockey a").text());
-					// 7. 馬体重(増減) (class="Weight") -> spanの中身まで含めるなら .text()
-					entry.setHorseWeight(row.selectFirst("td.Weight").text());
-					// 8. 予想オッズ
-					Element oddsElem = row.selectFirst("td.Popular span");
-					if (oddsElem != null) {
-					    String oddsText = oddsElem.text().trim();
-					    // オッズが "---.-" の場合は null にする
-					    if (oddsText.contains("-") || oddsText.isEmpty()) {
-					        entry.setOdds(null);
-					    } else {
-					        entry.setOdds(Double.parseDouble(oddsText));
-					    }
-					}
-					// 9. 人気
-					Element ninkiElem = row.selectFirst("td.Popular_Ninki span[id^=ninki-]");
-					if (ninkiElem != null && !ninkiElem.text().contains("*")) {
-						entry.setPopularity(Integer.parseInt(ninkiElem.text()));
-					} else {
-						entry.setPopularity(null);
-					}
-					// HorseId の抽出
+					entry.setJockey(row.selectFirst("td.Jockey a").text()); // 騎手名
+					entry.setHorseWeight(row.selectFirst("td.Weight").text()); // 馬体重(増減)
+
+					// 個別の馬詳細ページへのリンクからIDを抜き出し（文字列操作）
 					Element horseLink = row.selectFirst("td.HorseInfo a");
 					if (horseLink != null) {
 						String href = horseLink.attr("href");
 						entry.setNetkeibaHorseId(href.substring(href.lastIndexOf("/") + 1));
 					}
+
+					// レースエンティティに出走馬を追加
 					race.addEntry(entry);
 				} catch (Exception e) {
-					// ここで個別の行の解析エラーをキャッチすることで、ループを止めない
+					// 特定の馬データで解析エラーが発生しても、他の馬の解析を止めないための個別キャッチ
 					System.err.println("行解析スキップ: " + e.getMessage());
 				}
 			}
 
-			// 保存処理：データが1件以上取れた場合のみ保存
+			// 出走馬情報が1件でも取れた場合のみ、DB更新フローへ回す
 			if (!race.getEntries().isEmpty()) {
 				saveOrUpdateShutuba(race);
 			} else {
@@ -150,21 +143,22 @@ public class ShutubaService {
 			}
 
 		} catch (Exception e) {
+			// スクレイピング全体が失敗した場合のエラーログ
 			System.err.println("[❌出走予定解析エラー] " + raceId + ": " + e.getMessage());
 		}
 	}
 
 	/**
-	 * 今日以降の出馬表データを開催日順で取得する
+	 * 今後の開催予定レースを、開催日の昇順で全件取得します。
 	 */
 	public List<ShutubaRace> getUpcomingRaces() {
-		//		LocalDate today = LocalDate.now();  今日移行で検索する処理なので、一旦コメントアウト
+		// 現在は検証のため固定日付を利用しているが、必要に応じてLocalDate.now()に切り替え可能
 		LocalDate today = LocalDate.of(2026, 07, 01);
-		System.out.println("検索に使用する日付: " + today); // ここをコンソールで確認
+		System.out.println("検索に使用する日付: " + today);
 
 		List<ShutubaRace> result = shutubaRaceRepository.findByRaceDateGreaterThanEqualOrderByRaceDateAsc(today);
 		System.out.println("検索結果の件数: " + result.size());
+
 		return result;
 	}
-
 }

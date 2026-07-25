@@ -36,6 +36,9 @@ public class RaceResult {
 
 	@Column(name = "horse_number")
 	private Integer horseNumber; // 馬番
+	
+	@Column(name = "sex_age")
+	private String sexAge; // 「牡3」「牝4」などを保存
 
 	@Column(name = "jockey_name")
 	private String jockeyName; // 騎手名
@@ -149,5 +152,13 @@ public class RaceResult {
 
 	public void setLast3fTime(Double last3fTime) {
 		this.last3fTime = last3fTime;
+	}
+	
+	public String getSexAge() {
+	    return sexAge;
+	}
+
+	public void setSexAge(String sexAge) {
+	    this.sexAge = sexAge;
 	}
 }
