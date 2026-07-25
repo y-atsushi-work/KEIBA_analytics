@@ -4,4 +4,7 @@ bin/
 build/
 .gradle/
 *.log
+.env
+.venv/
+target/
 .DS_Store
