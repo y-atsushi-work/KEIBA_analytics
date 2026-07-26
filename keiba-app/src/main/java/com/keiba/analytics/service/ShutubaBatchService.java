@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import jakarta.annotation.PostConstruct;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +19,15 @@ public class ShutubaBatchService {
 	@Autowired
 	private ShutubaService shutubaService;
 
-	// ★起動時に必ず一度だけ実行するアノテーションを追加
+	// ※ 過去7年分のバッチ（RaceSyncManager）を優先して動かすため、
+	// 起動時の強制デバッグ実行（@PostConstruct）はコメントアウトを推奨します。
+	/*
 	@PostConstruct
 	public void init() {
 		System.out.println("★【デバッグ】強制的にバッチを開始します！");
-//		processRacesForDate(LocalDate.now());  以下で日付していするため一旦コメントアウト
 		processRacesForDate(LocalDate.of(2026, 7, 12));
 	}
+	*/
 
 	// 1. 【自動実行】30分毎に実行（当日のみ）
 	@Scheduled(cron = "0 0/30 9-16 * * *")

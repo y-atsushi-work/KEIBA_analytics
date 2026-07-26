@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: 'mysql:8.4.10'  # ← ポイント1：バージョンを固定
+    image: 'mysql:8.4.10'  # バージョンを固定
     container_name: horse-race-db
     environment:
       MYSQL_DATABASE: 'mydatabase'
@@ -9,7 +9,7 @@ services:
     ports:
       - '3307:3306'
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    volumes:               # ← ポイント2：データの永続化
+    volumes:               # データの永続化
       - mysql_data:/var/lib/mysql
 
 volumes:

@@ -1,5 +1,7 @@
 package com.keiba.analytics.util;
 
+import java.util.Random;
+
 public class KeibaUtils {
 
 	// 競馬場コードを名前に変換
@@ -31,5 +33,17 @@ public class KeibaUtils {
 		case "86" -> "佐賀";
 		default -> "その他";
 		};
+	}
+	
+	//指定範囲でランダムにスリープする
+	public static void randomSleep() {
+	    try {
+	        // 1000ミリ秒（1秒）〜 2500ミリ秒（2.5秒）の間のランダムな秒数待機
+	        Random random = new Random();
+	        int sleepTime = 1000 + random.nextInt(1500); 
+	        Thread.sleep(sleepTime);
+	    } catch (InterruptedException e) {
+	        Thread.currentThread().interrupt();
+	    }
 	}
 }
