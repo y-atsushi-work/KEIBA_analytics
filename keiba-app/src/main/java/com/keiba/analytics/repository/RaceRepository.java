@@ -1,10 +1,12 @@
 package com.keiba.analytics.repository;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.keiba.analytics.entity.Race;
@@ -27,4 +29,10 @@ public interface RaceRepository extends JpaRepository<Race, Long> {
      * 指定されたnetkeibaRaceId（レースID）がすでにデータベースに登録されているか確認する
      */
     boolean existsByNetkeibaRaceId(String netkeibaRaceId);
+    
+    /**
+	 * バッチ処理の開始日を動的に決定し、中断したところから再開するために使用します。
+	 */
+	@Query("SELECT MAX(r.raceDate) FROM Race r")
+	Optional<LocalDate> findLatestRaceDate();
 }

@@ -109,34 +109,40 @@ def generate_predictions():
                 
                 is_ml_trained = True
                 print("機械学習モデル（回帰・ロジスティック）の学習が完了しました。")
-
-        # ==========================================
+# ==========================================
         # 3. 【出走予定馬のデータ取得と3モデルのスコア算出】
         # ==========================================
+        # 各出走馬の「実際の斤量」等を取得する
         cursor.execute("""
             SELECT 
-                s.netkeiba_horse_id,
-                CAST(s.carried_weight AS DECIMAL(5,2)) as carried_weight
-            FROM shutuba_entries s
-            WHERE s.netkeiba_horse_id IS NOT NULL
+                netkeiba_horse_id,
+                CAST(carried_weight AS DECIMAL(5,2)) as carried_weight
+            FROM shutuba_entries
+            WHERE netkeiba_horse_id IS NOT NULL
         """)
-        entries = cursor.fetchall()
-        
-        # 各馬の過去タイム情報を取得するための一時辞書
+        entry_weights = {}
+        for row in cursor.fetchall():
+            if row["netkeiba_horse_id"]:
+                entry_weights[row["netkeiba_horse_id"]] = float(row["carried_weight"]) if row["carried_weight"] else 55.0
+
+        # 各馬の過去タイム情報を取得 (Horseテーブルを経由して netkeiba_horse_id で正しく紐付ける)
         cursor.execute("""
             SELECT 
-                s.netkeiba_horse_id,
+                h.netkeiba_horse_id,
                 r.location,
                 r.distance,
-                rr.race_time
-            FROM shutuba_entries s
-            LEFT JOIN race_results rr ON s.netkeiba_horse_id = rr.horse_id
-            LEFT JOIN races r ON rr.race_id = r.id
-            WHERE s.netkeiba_horse_id IS NOT NULL
+                rr.race_time,
+                rr.last_3f_time
+            FROM race_results rr
+            JOIN horses h ON rr.horse_id = h.id
+            JOIN races r ON rr.race_id = r.id
+            WHERE rr.race_time IS NOT NULL AND rr.race_time != '-'
         """)
         entry_history = cursor.fetchall()
         
         horse_speed_scores = {}
+        horse_l3f_history = {} # 馬ごとの過去上がり3F平均用
+        
         for entry in entry_history:
             h_id = entry["netkeiba_horse_id"]
             t_sec = time_to_seconds(entry["race_time"])
@@ -148,8 +154,14 @@ def generate_predictions():
             if h_id not in horse_speed_scores:
                 horse_speed_scores[h_id] = []
             horse_speed_scores[h_id].append(s_idx)
+            
+            # 過去の上がり3Fも蓄積しておく
+            if entry["last_3f_time"] is not None:
+                if h_id not in horse_l3f_history:
+                    horse_l3f_history[h_id] = []
+                horse_l3f_history[h_id].append(float(entry["last_3f_time"]))
 
-        # ユニークな出走馬一覧を取得して予測を組み立て
+        # ユニークな出走馬一覧を取得
         cursor.execute("SELECT DISTINCT netkeiba_horse_id FROM shutuba_entries WHERE netkeiba_horse_id IS NOT NULL")
         unique_horses = cursor.fetchall()
         
@@ -158,16 +170,21 @@ def generate_predictions():
         for h in unique_horses:
             horse_id = h["netkeiba_horse_id"]
             
-            # --- モデル1: スピード指数スコア (0〜100に正規化) ---
+            # --- モデル1: スピード指数スコア ---
             if horse_id in horse_speed_scores and horse_speed_scores[horse_id]:
                 raw_speed = sum(horse_speed_scores[horse_id]) / len(horse_speed_scores[horse_id])
                 speed_score = round(max(0.0, min(100.0, raw_speed)), 1)
             else:
                 speed_score = 50.0
             
-            # --- モデル2 & 3 用の特徴量準備 ---
-            w_val = 55.0  # デフォルト斤量
-            l3f_val = 35.0 # デフォルト上がり3F
+            # --- モデル2 & 3 用の特徴量（馬ごとの実データを使用） ---
+            w_val = entry_weights.get(horse_id, 55.0) # 実際の斤量（取れなければ55.0）
+            
+            # その馬の過去の平均上がり3F、なければ全体のデフォルト
+            if horse_id in horse_l3f_history and horse_l3f_history[horse_id]:
+                l3f_val = sum(horse_l3f_history[horse_id]) / len(horse_l3f_history[horse_id])
+            else:
+                l3f_val = 35.0 
             
             # 機械学習による予測計算
             if is_ml_trained:
@@ -177,9 +194,9 @@ def generate_predictions():
                 pred_reg = reg_model.predict(X_pred)[0]
                 regression_score = round(max(0.0, min(100.0, float(pred_reg) * 5.0)), 1)
                 
-                # モデル3: ロジスティック回帰（勝率確率 0.0〜1.0 を 0〜100点に換算）
+                # モデル3: ロジスティック回帰
                 try:
-                    proba = clf_model.predict_proba(X_pred)[0][1] # 1着になる確率
+                    proba = clf_model.predict_proba(X_pred)[0][1]
                     win_prob_score = round(proba * 100.0, 1)
                 except Exception:
                     win_prob_score = 50.0
@@ -187,10 +204,7 @@ def generate_predictions():
                 regression_score = 50.0
                 win_prob_score = 50.0
             
-            # ==========================================
-            # 4. 【総合スコアの合算（加重平均）】
-            # 例: スピード指数 40% + 回帰分析 30% + 勝率予測 30%
-            # ==========================================
+            # --- 総合スコアの合算 ---
             combined_score = round(
                 (speed_score * 0.4) + 
                 (regression_score * 0.3) + 
@@ -199,8 +213,9 @@ def generate_predictions():
             
             prediction_data.append({
                 "netkeibaHorseId": horse_id,
-                "score": combined_score # 画面にはこの合算スコアが表示されます
+                "score": combined_score
             })
+            print(f"馬ID: {horse_id} | 斤量: {w_val} | 上がり3F: {l3f_val:.1f} | スピード: {speed_score} | 回帰: {regression_score} | 勝率: {win_prob_score} | 総合: {combined_score}")
             
     finally:
         cursor.close()
