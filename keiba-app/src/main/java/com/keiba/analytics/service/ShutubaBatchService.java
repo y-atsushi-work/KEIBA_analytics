@@ -36,11 +36,11 @@ public class ShutubaBatchService {
 		processRacesForDate(LocalDate.now());
 	}
 
-	// 2. 【任意実行】2日分の一括更新
+	// 2. 【任意実行】7日分の一括更新
 	public void executeWeeklyShutubaCrawl() {
-		System.out.println("[🚀全件一括更新] 2日分のバッチを開始します。");
+		System.out.println("[🚀全件一括更新] 7日分のバッチを開始します。");
 		LocalDate today = LocalDate.now();
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 7; i++) {
 			processRacesForDate(today.plusDays(i));  
 		}
 	}

@@ -3,83 +3,602 @@
 
 <head>
 	<meta charset="UTF-8">
-	<title>出走予定一覧</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>出走予定一覧 | KEIBA Analytics</title>
 	<style>
-		body {
-			font-family: sans-serif;
-			margin: 40px;
-			background: #f4f7f6;
+		:root {
+			--bg-main: #0f172a;
+			--bg-card: #1e293b;
+			--bg-card-hover: #334155;
+			--text-main: #f8fafc;
+			--text-sub: #94a3b8;
+			--accent-emerald: #10b981;
+			--accent-amber: #f59e0b;
+			--accent-blue: #3b82f6;
+			--border-color: #334155;
 		}
 
-		.race-card {
-			background: white;
-			padding: 20px;
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			background-color: var(--bg-main);
+			color: var(--text-main);
+			padding: 24px;
+			line-height: 1.5;
+		}
+
+		.container {
+			max-width: 1000px;
+			margin: 0 auto;
+		}
+
+		/* ヘッダー */
+		.page-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
 			margin-bottom: 20px;
+		}
+
+		.page-title {
+			font-size: 1.5rem;
+			font-weight: 800;
+		}
+
+		.btn-back {
+			color: var(--text-sub);
+			text-decoration: none;
+			font-size: 0.875rem;
+			font-weight: 600;
+			padding: 8px 16px;
+			background: var(--bg-card);
+			border: 1px solid var(--border-color);
 			border-radius: 8px;
-			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			transition: all 0.2s;
+		}
+
+		.btn-back:hover {
+			color: var(--text-main);
+			background: var(--bg-card-hover);
+		}
+
+		/* フィルターエリア（日付＋競馬場の2段タブ） */
+		.filter-section {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-bottom: 24px;
+			background: var(--bg-card);
+			padding: 16px;
+			border-radius: 12px;
+			border: 1px solid var(--border-color);
+		}
+
+		.filter-row {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			overflow-x: auto;
+		}
+
+		.filter-label {
+			font-size: 0.75rem;
+			font-weight: 800;
+			color: var(--text-sub);
+			white-space: nowrap;
+			min-width: 50px;
+		}
+
+		.tab-group {
+			display: flex;
+			gap: 8px;
+		}
+
+		.tab-btn {
+			background: #0f172a;
+			color: var(--text-sub);
+			border: 1px solid var(--border-color);
+			padding: 6px 14px;
+			border-radius: 8px;
+			font-weight: 700;
+			font-size: 0.85rem;
+			cursor: pointer;
+			transition: all 0.2s;
+			white-space: nowrap;
+		}
+
+		.tab-btn:hover {
+			background: var(--bg-card-hover);
+			color: var(--text-main);
+		}
+
+		/* 日付タブのアクティブスタイル */
+		.tab-btn-date.active {
+			background: var(--accent-blue);
+			color: #ffffff;
+			border-color: var(--accent-blue);
+			box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+		}
+
+		/* 競馬場タブのアクティブスタイル */
+		.tab-btn-course.active {
+			background: var(--accent-emerald);
+			color: #ffffff;
+			border-color: var(--accent-emerald);
+			box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+		}
+
+		/* レースカード (アコーディオン) */
+		.race-card {
+			background: var(--bg-card);
+			border: 1px solid var(--border-color);
+			border-radius: 12px;
+			margin-bottom: 12px;
+			overflow: hidden;
+			transition: border-color 0.2s;
+		}
+
+		.race-card:hover {
+			border-color: var(--accent-emerald);
+		}
+
+		/* レース概要（クリックヘッダー） */
+		.race-summary {
+			padding: 16px 20px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			cursor: pointer;
+			user-select: none;
+			background: var(--bg-card);
+			transition: background 0.2s;
+		}
+
+		.race-summary:hover {
+			background: rgba(255, 255, 255, 0.02);
+		}
+
+		.race-info-main {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+
+		.badge-number {
+			background: #0f172a;
+			color: var(--accent-amber);
+			border: 1px solid var(--border-color);
+			font-size: 0.8rem;
+			font-weight: 800;
+			padding: 4px 8px;
+			border-radius: 6px;
+		}
+
+		.race-name {
+			font-size: 1.1rem;
+			font-weight: 700;
+		}
+
+		.race-meta {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			color: var(--text-sub);
+			font-size: 0.85rem;
+		}
+
+		.arrow-icon {
+			font-size: 0.8rem;
+			transition: transform 0.3s ease;
+			color: var(--text-sub);
+		}
+
+		.race-card.open .arrow-icon {
+			transform: rotate(180deg);
+		}
+
+		/* レース詳細（スライド展開エリア） */
+		.race-details {
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.35s cubic-bezier(0, 1, 0, 1);
+			background: #0f172a;
+			border-top: 0px solid var(--border-color);
+		}
+
+		.race-card.open .race-details {
+			max-height: 2000px;
+			transition: max-height 0.5s ease-in-out;
+			border-top-width: 1px;
+		}
+
+		.details-inner {
+			padding: 20px;
+		}
+
+		/* テーブルデザイン */
+		.table-wrapper {
+			overflow-x: auto;
+			border-radius: 8px;
+			border: 1px solid var(--border-color);
 		}
 
 		table {
 			width: 100%;
 			border-collapse: collapse;
-			margin-top: 10px;
-		}
-
-		th,
-		td {
-			border: 1px solid #ddd;
-			padding: 8px;
-			text-align: center;
+			text-align: left;
+			font-size: 0.875rem;
 		}
 
 		th {
-			background-color: #f8f9fa;
+			background-color: var(--bg-card);
+			color: var(--text-sub);
+			font-weight: 700;
+			padding: 10px 14px;
+			border-bottom: 1px solid var(--border-color);
+			white-space: nowrap;
 		}
 
-		.btn-buy {
-			background: #e74c3c;
-			color: white;
-			border: none;
-			padding: 10px 20px;
-			border-radius: 4px;
+		/* スコア列ヘッダーのクリック可能なデザイン */
+		th.sortable-score {
 			cursor: pointer;
+			user-select: none;
+			transition: color 0.2s, background-color 0.2s;
+		}
+
+		th.sortable-score:hover {
+			color: var(--accent-amber);
+			background-color: var(--bg-card-hover);
+		}
+
+		td {
+			padding: 10px 14px;
+			border-bottom: 1px solid var(--border-color);
+			color: #e2e8f0;
+			white-space: nowrap;
+		}
+
+		tbody tr:hover {
+			background-color: rgba(255, 255, 255, 0.02);
+		}
+
+		tbody tr:last-child td {
+			border-bottom: none;
+		}
+
+		.score-highlight {
+			color: var(--accent-amber);
+			font-weight: 800;
+		}
+
+		.empty-state {
+			text-align: center;
+			padding: 48px;
+			color: var(--text-sub);
+		}
+
+		.btn-generate {
+			background: linear-gradient(135deg, #6366f1, #a855f7);
+			color: #ffffff;
+			border: none;
+			padding: 8px 16px;
+			border-radius: 8px;
+			font-weight: 700;
+			font-size: 0.875rem;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+		}
+
+		.btn-generate:hover {
+			opacity: 0.9;
+			transform: translateY(-1px);
+		}
+
+		.btn-generate:disabled {
+			background: #475569;
+			cursor: not-allowed;
+			box-shadow: none;
+			transform: none;
+		}
+
+		/* スピナーアニメーション */
+		@keyframes spin {
+			0% {
+				transform: rotate(0deg);
+			}
+
+			100% {
+				transform: rotate(360deg);
+			}
+		}
+
+		.spinner {
+			display: inline-block;
+			width: 14px;
+			height: 14px;
+			border: 2px solid rgba(255, 255, 255, 0.3);
+			border-radius: 50%;
+			border-top-color: #ffffff;
+			animation: spin 0.8s linear infinite;
 		}
 	</style>
 </head>
 
 <body>
-	<h1>🏇 出走予定一覧</h1>
-	<a href="/races">← 過去レース一覧へ戻る</a>
+	<div class="container">
+		<header class="page-header">
+			<h1 class="page-title">🏇 出走予定一覧</h1>
+			<div style="display: flex; gap: 10px; align-items: center;">
+				<!-- 予想スコア再計算ボタン -->
+				<button id="btnGenerate" class="btn-generate" onclick="generateScores()">
+					<span>✨ 予想スコア再計算</span>
+				</button>
+				<a href="/races" class="btn-back">← 過去レース一覧へ戻る</a>
+			</div>
+		</header>
 
-	<div th:each="race : ${shutubaList}" class="race-card">
-		<h2 th:text="${race.raceName + ' (' + race.raceDate + ')'}">レース名</h2>
-		<table>
-			<thead>
-				<tr>
-					<th>枠</th>
-					<th>馬番</th>
-					<th>馬名</th>
-					<th>性齢</th>
-					<th>斤量</th>
-					<th>騎手</th>
-					<th>馬体重</th>
-					<th>予想スコア</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr th:each="entry : ${race.entries}">
-					<td th:text="${entry.bracketNumber}"></td>
-					<td th:text="${entry.horseNumber}"></td>
-					<td th:text="${entry.horseName}"></td>
-					<td th:text="${entry.sexAge}"></td>
-					<td th:text="${entry.carriedWeight}"></td>
-					<td th:text="${entry.jockey}"></td>
-					<td th:text="${entry.horseWeight}"></td>
-					<td th:text="${scoreMap != null and scoreMap[entry.netkeibaHorseId] != null} ? ${scoreMap[entry.netkeibaHorseId]} : '-'">-</td>
-				</tr>
-			</tbody>
-		</table>
+		<!-- 1. タブフィルターエリア（日付＋競馬場） -->
+		<div class="filter-section">
+			<!-- 日付タブ -->
+			<div class="filter-row">
+				<span class="filter-label">日 付</span>
+				<div class="tab-group" id="dateTabContainer">
+					<button class="tab-btn tab-btn-date active" onclick="selectDate('ALL')">すべて</button>
+				</div>
+			</div>
+			<!-- 競馬場タブ -->
+			<div class="filter-row">
+				<span class="filter-label">開 催</span>
+				<div class="tab-group" id="courseTabContainer">
+					<button class="tab-btn tab-btn-course active" onclick="selectCourse('ALL')">すべて</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- データなし時の表示 -->
+		<div th:if="${#lists.isEmpty(shutubaList)}" class="empty-state">
+			<p>現在表示できる出走予定データがありません。</p>
+		</div>
+
+		<!-- 2. レース一覧（data-date と data-racecourse を保持） -->
+		<div th:each="race : ${shutubaList}" class="race-card" th:data-date="${race.raceDate}"
+			th:data-racecourse="${race.location ?: 'その他'}">
+
+			<!-- レース概要 -->
+			<div class="race-summary" onclick="toggleDetails(this)">
+				<div class="race-info-main">
+					<span class="badge-number" th:text="${race.round != null ? race.round + 'R' : 'R'}">11R</span>
+					<div>
+						<div class="race-name" th:text="${race.raceName}">レース名</div>
+						<div style="font-size: 0.75rem; color: var(--text-sub);" th:text="${race.raceDate}">2026-08-08</div>
+					</div>
+				</div>
+
+				<div class="race-meta">
+					<span th:text="${race.location}">東京</span>
+					<span th:text="${race.entries != null ? race.entries.size() + '頭' : '0頭'}">16頭</span>
+					<span class="arrow-icon">▼</span>
+				</div>
+			</div>
+
+			<!-- レース詳細（アコーディオン） -->
+			<div class="race-details">
+				<div class="details-inner">
+					<div class="table-wrapper">
+						<table class="entry-table">
+							<thead>
+								<tr>
+									<th style="text-align: center;">枠</th>
+									<th style="text-align: center;">馬番</th>
+									<th>馬名</th>
+									<th style="text-align: center;">性齢</th>
+									<th style="text-align: center;">斤量</th>
+									<th>騎手</th>
+									<th style="text-align: center;">馬体重</th>
+									<!-- 予想スコアヘッダーを押下でソート実行 -->
+									<th style="text-align: center;" class="sortable-score" onclick="sortTableByScore(this)">
+										予想スコア <span class="sort-icon">⇅</span>
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr th:each="entry : ${race.entries}">
+									<td style="text-align: center;" class="cell-bracket" th:text="${entry.bracketNumber}">-</td>
+									<td style="text-align: center;" class="cell-horse-num" th:text="${entry.horseNumber}">-</td>
+									<td style="font-weight: 700; color: #fff;" th:text="${entry.horseName}">馬名</td>
+									<td style="text-align: center;" th:text="${entry.sexAge}">-</td>
+									<td style="text-align: center;" th:text="${entry.carriedWeight}">-</td>
+									<td th:text="${entry.jockey}">騎手名</td>
+									<td style="text-align: center;" th:text="${entry.horseWeight}">-</td>
+									<td style="text-align: center;" class="score-highlight cell-score"
+										th:text="${scoreMap != null and scoreMap[entry.netkeibaHorseId] != null} ? ${scoreMap[entry.netkeibaHorseId]} : '-'">
+										-
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+		</div>
 	</div>
+
+	<script>
+		// 現在のフィルタ状態
+		let currentSelectedDate = 'ALL';
+		let currentSelectedCourse = 'ALL';
+
+		// アコーディオン開閉
+		function toggleDetails(summaryEl) {
+			const card = summaryEl.closest('.race-card');
+			card.classList.toggle('open');
+		}
+
+		// 初期化：画面上のカードから「日付」と「競馬場」を動的抽出してタブ化
+		document.addEventListener("DOMContentLoaded", () => {
+			const cards = document.querySelectorAll('.race-card');
+			const dates = new Set();
+			const courses = new Set();
+
+			cards.forEach(card => {
+				const date = card.getAttribute('data-date');
+				const course = card.getAttribute('data-racecourse');
+
+				if (date) dates.add(date);
+				if (course && course !== 'その他') courses.add(course);
+			});
+
+			// 日付タブ生成 (昇順ソート)
+			const dateContainer = document.getElementById('dateTabContainer');
+			Array.from(dates).sort().forEach(date => {
+				const btn = document.createElement('button');
+				btn.className = 'tab-btn tab-btn-date';
+				btn.textContent = date;
+				btn.onclick = () => selectDate(date);
+				dateContainer.appendChild(btn);
+			});
+
+			// 競馬場タブ生成
+			const courseContainer = document.getElementById('courseTabContainer');
+			courses.forEach(course => {
+				const btn = document.createElement('button');
+				btn.className = 'tab-btn tab-btn-course';
+				btn.textContent = course;
+				btn.onclick = () => selectCourse(course);
+				courseContainer.appendChild(btn);
+			});
+		});
+
+		// 日付切り替え
+		function selectDate(date) {
+			currentSelectedDate = date;
+			updateTabActive('tab-btn-date', date);
+			applyFilter();
+		}
+
+		// 競馬場切り替え
+		function selectCourse(course) {
+			currentSelectedCourse = course;
+			updateTabActive('tab-btn-course', course);
+			applyFilter();
+		}
+
+		// タブの表示状態更新
+		function updateTabActive(className, targetValue) {
+			const buttons = document.querySelectorAll('.' + className);
+			buttons.forEach(btn => {
+				if ((targetValue === 'ALL' && btn.textContent === 'すべて') || btn.textContent === targetValue) {
+					btn.classList.add('active');
+				} else {
+					btn.classList.remove('active');
+				}
+			});
+		}
+
+		// 複合フィルタリング処理（日付 × 競馬場）
+		function applyFilter() {
+			const cards = document.querySelectorAll('.race-card');
+			cards.forEach(card => {
+				const cardDate = card.getAttribute('data-date');
+				const cardCourse = card.getAttribute('data-racecourse');
+
+				const matchDate = (currentSelectedDate === 'ALL' || cardDate === currentSelectedDate);
+				const matchCourse = (currentSelectedCourse === 'ALL' || cardCourse === currentSelectedCourse);
+
+				if (matchDate && matchCourse) {
+					card.style.display = 'block';
+				} else {
+					card.style.display = 'none';
+				}
+			});
+		}
+
+		// 特定テーブルの「予想スコア」列押下時の並び替え処理（スコア降順 ⇄ 馬番昇順）
+		function sortTableByScore(thElement) {
+			const table = thElement.closest('table');
+			const tbody = table.querySelector('tbody');
+			const rows = Array.from(tbody.querySelectorAll('tr'));
+			const icon = thElement.querySelector('.sort-icon');
+
+			// 現在の状態を取得（デフォルトまたは馬番順ならスコア降順へ）
+			const isScoreSorted = thElement.getAttribute('data-sorted') === 'true';
+
+			rows.sort((a, b) => {
+				if (!isScoreSorted) {
+					// 予想スコア 降順
+					const scoreA = parseFloat(a.querySelector('.cell-score').textContent.trim()) || -999;
+					const scoreB = parseFloat(b.querySelector('.cell-score').textContent.trim()) || -999;
+					return scoreB - scoreA;
+				} else {
+					// 馬番 昇順
+					const numA = parseInt(a.querySelector('.cell-horse-num').textContent.trim()) || 999;
+					const numB = parseInt(b.querySelector('.cell-horse-num').textContent.trim()) || 999;
+					return numA - numB;
+				}
+			});
+
+			// トグル状態の更新と表示用の矢印アイコン変更
+			if (!isScoreSorted) {
+				thElement.setAttribute('data-sorted', 'true');
+				thElement.style.color = 'var(--accent-amber)';
+				if (icon) icon.textContent = '▼';
+			} else {
+				thElement.setAttribute('data-sorted', 'false');
+				thElement.style.color = '';
+				if (icon) icon.textContent = '⇅';
+			}
+
+			// 並び替えた行をDOMに反映
+			rows.forEach(row => tbody.appendChild(row));
+		}
+
+		// スコア再生成APIの呼び出し処理
+		async function generateScores() {
+			const btn = document.getElementById('btnGenerate');
+			if (!btn) return;
+
+			const originalHTML = btn.innerHTML;
+
+			// ボタンを実行中表示に変更
+			btn.disabled = true;
+			btn.innerHTML = '<span class="spinner"></span> 実行中...';
+
+			try {
+				const response = await fetch('/api/generate-scores', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				});
+
+				const result = await response.json();
+
+				if (response.ok) {
+					// キャッシュを回避して最新データを引き直す
+					window.location.href = '/shutuba?t=' + new Date().getTime();
+				} else {
+					alert('❌ エラー: ' + result.message);
+					btn.disabled = false;
+					btn.innerHTML = originalHTML;
+				}
+			} catch (error) {
+				console.error('API Error:', error);
+				alert('❌ 通信エラーが発生しました。');
+				btn.disabled = false;
+				btn.innerHTML = originalHTML;
+			}
+		}
+	</script>
 </body>
 
 </html>
